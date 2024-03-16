@@ -204,12 +204,61 @@ Resources:
       SubnetId: !Ref PrivateSubnet4 
 
   
-  InternetFacingSG:
+  WebTierSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: Internet-facing-sg
       GroupDescription: Security group with no ingress rule
       VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref AppTierASG
+  AppTierASG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: Application-sg
+      GroupDescription: Security group with no ingress rule
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref WebTierSG
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref DBTierSG
+  DBTierSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: Database-sg
+      GroupDescription: Security group with no ingress rule
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref WebTierSG
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref AppTierASG
 Outputs:
   VPC:
     Description: A reference to the created VPC
@@ -244,6 +293,14 @@ Outputs:
     Description: A reference to the private subnet in the 2nd Availability Zone
     Value: !Ref PrivateSubnet4
 
-  InternetFacingSG:
+  WebTierSG:
     Description: Security group with no ingress rule
-    Value: !Ref InternetFacingSG
+    Value: !Ref WebTierSG
+  AppTierSG:
+    Description: Security group with no ingress rule
+    Value: !Ref AppTierSG
+  DBTierSG:
+    Description: Security group with no ingress rule
+    Value: !Ref DBTierSG
+
+  
